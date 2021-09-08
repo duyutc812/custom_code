@@ -1002,3 +1002,5 @@ if ord_items:
 					item_data['product_options'].append(option)
 		items_data.append(item_data)
 		self.log(items_data, 'item_data')
+
+#check
