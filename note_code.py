@@ -1004,3 +1004,4 @@ if ord_items:
 		self.log(items_data, 'item_data')
 
 #check
+s
