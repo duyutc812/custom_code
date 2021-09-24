@@ -1122,3 +1122,4 @@ if ord_items:
         self.log(items_data, 'item_data')
 
 # check
+^(2021/04/29 09 ?:[0-1]{0,1}[0-9]{1,2}:[0-5][0-9] ?:) 
