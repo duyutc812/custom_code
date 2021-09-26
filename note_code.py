@@ -36,7 +36,6 @@ if 'clear_product_imported' not in self._notice:
 
 
 # update giá, sku, barcode, supplier woocommerce:
-
 def check_manufacturer_import(self, convert, manufacturer, manufacturers_ext):
     # 1
     manu_id = self.get_map_field_by_src(self.TYPE_MANUFACTURER, convert['id'])
