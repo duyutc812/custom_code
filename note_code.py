@@ -1122,3 +1122,80 @@ if ord_items:
 
 # check
 ^(2021/04/29 09 ?:[0-1]{0,1}[0-9]{1,2}:[0-5][0-9] ?:) 
+
+# update price and add related product, upsells, crosssell into metafields shopify
+def check_product_import(self, convert, product, products_ext):
+		# self.log(convert, 'pro_convert')
+		product_id = self.get_map_field_by_src(self.TYPE_PRODUCT, convert['id'], convert['code'])
+		if product_id:
+			product_api = self.api('products/' + to_str(product_id) + '.json')
+			product_data = json_decode(product_api)
+			product_data = product_data.get('product')
+			if not product_data:
+				return True
+			variant_data = product_data.get('variants')
+			if variant_data and len(variant_data) == 1:
+				variant_id = variant_data[0].get('id')
+				if not variant_id:
+					return True
+				pro_price_update_data = {
+					"variant": {
+						'id': variant_id,
+						'price': convert['price']
+					}
+				}
+				self.api('/variants/' + to_str(variant_id) + '.json', pro_price_update_data, 'PUT')
+				self.log(f"{convert['id']} | {convert['sku']} |{product_id} | {convert['price']}", 'pro_price_upate')
+
+		# 	if convert['relate'].get('related_products'):
+		# 		list_product_relate_id = list(map(lambda x: x['id'], convert['relate'].get('related_products')))
+		# 		list_product_relate_id_target = list(filter(lambda x: x, [self.get_map_field_by_src(self.TYPE_PRODUCT, x, convert['code']) for x in list_product_relate_id]))
+		# 		list_product_relate_id_target = [to_str(x) for x in list_product_relate_id_target]
+		# 		# self.log(f"related: {convert['id']} | {list_product_relate_id_target}", 'list_related_pro')
+		# 		if list_product_relate_id_target:
+		# 			value = ', '.join(list_product_relate_id_target)
+		# 			pro_related_metafield = {
+		# 				"metafield": {
+		# 					"key": "related_products",
+		# 					"value": value,
+		# 					"value_type": "string",
+		# 					"namespace": "global"
+		# 				}
+		# 			}
+		# 			self.api('products/' + to_str(product_id) + '/metafields.json', pro_related_metafield, 'Post')
+		# 			self.log(f"{convert['id']} | {convert['sku']} |{product_id} | {pro_related_metafield}", 'pro_related')
+		# 	if convert['relate'].get('up_sells'):
+		# 		list_product_upsells_id = list(map(lambda x: x['id'], convert['relate'].get('up_sells')))
+		# 		list_product_upsell_id_target = list(filter(lambda x: x, [self.get_map_field_by_src(self.TYPE_PRODUCT, x, convert['code']) for x in list_product_upsells_id]))
+		# 		list_product_upsell_id_target = [to_str(x) for x in list_product_upsell_id_target]
+		# 		# self.log(f"related: {convert['id']} | {list_product_upsell_id_target}", 'list_upsell_pro')
+		# 		if list_product_upsell_id_target:
+		# 			value = ', '.join(list_product_upsell_id_target)
+		# 			pro_upsells_metafield = {
+		# 				"metafield": {
+		# 					"key": "up_sells",
+		# 					"value": value,
+		# 					"value_type": "string",
+		# 					"namespace": "global"
+		# 				}
+		# 			}
+		# 			self.api('products/' + to_str(product_id) + '/metafields.json', pro_upsells_metafield, 'Post')
+		# 			self.log(f"{convert['id']} | {convert['sku']} |{product_id} | {pro_upsells_metafield}", 'pro_upsells')
+		# 	if convert['relate'].get('cross_sells'):
+		# 		list_product_cross_sells_id = list(map(lambda x: x['id'], convert['relate'].get('cross_sells')))
+		# 		list_product_cross_sells_id_target = list(filter(lambda x: x, [self.get_map_field_by_src(self.TYPE_PRODUCT, x, convert['code']) for x in list_product_cross_sells_id]))
+		# 		list_product_cross_sells_id_target = [to_str(x) for x in list_product_cross_sells_id_target]
+		# 		# self.log(f"related: {convert['id']} | {list_product_cross_sells_id_target}", 'list_cross_pro')
+		# 		if list_product_cross_sells_id_target:
+		# 			value = ', '.join(list_product_cross_sells_id_target)
+		# 			pro_cross_sells_metafield = {
+		# 				"metafield": {
+		# 					"key": "cross_sells",
+		# 					"value": value,
+		# 					"value_type": "string",
+		# 					"namespace": "global"
+		# 				}
+		# 			}
+		# 			self.api('products/' + to_str(product_id) + '/metafields.json', pro_cross_sells_metafield, 'Post')
+		# 			self.log(f"{convert['id']} | {convert['sku']} |{product_id} | {pro_cross_sells_metafield}", 'pro_crosssells')
+		return True #self.get_map_field_by_src(self.TYPE_PRODUCT, convert['id'], convert['code'])
