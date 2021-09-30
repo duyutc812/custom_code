@@ -1199,3 +1199,42 @@ def check_product_import(self, convert, product, products_ext):
 		# 			self.api('products/' + to_str(product_id) + '/metafields.json', pro_cross_sells_metafield, 'Post')
 		# 			self.log(f"{convert['id']} | {convert['sku']} |{product_id} | {pro_cross_sells_metafield}", 'pro_crosssells')
 		return True #self.get_map_field_by_src(self.TYPE_PRODUCT, convert['id'], convert['code'])
+    
+# update image from srcset - shopify (anh hien thi theo kich thuoc man hinh)
+def process_description_before_import(self, convert, is_blog = False, is_page = False):
+		theme_data = self.get_theme_data(is_blog=is_blog, is_page=is_page)
+		description = convert['content']
+		if not theme_data:
+			theme_data = self.get_theme_data(True, is_blog, is_page)
+		match = None
+		if description:
+			match = re.findall(r"<img[^>]+>", to_str(description))
+		links = list()
+		if match:
+			for img in match:
+				img_src = re.findall(r"(src=[\"'](.*?)[\"'])", to_str(img))
+				if not img_src:
+					continue
+				img_src = img_src[0]
+				if img_src[1] in links:
+					continue
+				image_path = img_src[1]
+				if self._notice['src']['cart_type'] == 'shopify':
+					if ('http' or 'https') not in image_path:
+						image_path = 'https://' + to_str(image_path).lstrip('//')
+					if '?' in image_path:
+						img_path = image_path.split('?')
+						image_path = img_path[0]
+					if image_path in links:
+						continue
+				links.append(image_path)
+				if 'srcset' in img:
+					image_from_srcset = re.findall(r"(srcset=[\"'](.*?)[\"'])", to_str(img))
+					if image_from_srcset:
+						list_image_from_srcset_data = image_from_srcset[0][1].split(',')
+						if list_image_from_srcset_data:
+							list_image_from_srcset = list(x.strip() for x in list_image_from_srcset_data)
+							list_image_from_srcset = list(map(lambda x: x.split(' ')[0], list_image_from_srcset))
+							for i in list_image_from_srcset:
+								if i not in links:
+									links.append(i)
