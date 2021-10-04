@@ -1121,7 +1121,7 @@ if ord_items:
         self.log(items_data, 'item_data')
 
 # check
-^(2021/04/29 09 ?:[0-1]{0,1}[0-9]{1,2}:[0-5][0-9] ?:) 
+^(2021/[0-1]{0,1}[0-1]{0,1}/[0-1]{0,1}[0-1]{0,1} [0-1]{0,1}[0-1]{0,1} ?:[0-1]{0,1}[0-9]{1,2}:[0-5][0-9] ?:) 
 
 # update price and add related product, upsells, crosssell into metafields shopify
 def check_product_import(self, convert, product, products_ext):
@@ -1201,7 +1201,7 @@ def check_product_import(self, convert, product, products_ext):
 		return True #self.get_map_field_by_src(self.TYPE_PRODUCT, convert['id'], convert['code'])
     
 # update image from srcset - shopify (anh hien thi theo kich thuoc man hinh)
-def process_description_before_import(self, convert, is_blog = False, is_page = False):
+    def process_description_before_import(self, convert, is_blog = False, is_page = False):
 		theme_data = self.get_theme_data(is_blog=is_blog, is_page=is_page)
 		description = convert['content']
 		if not theme_data:
