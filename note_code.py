@@ -1120,8 +1120,8 @@ if ord_items:
         items_data.append(item_data)
         self.log(items_data, 'item_data')
 
-# check
-^(2021/[0-1]{0,1}[0-1]{0,1}/[0-1]{0,1}[0-1]{0,1} [0-1]{0,1}[0-1]{0,1} ?:[0-1]{0,1}[0-9]{1,2}:[0-5][0-9] ?:) 
+# regex remove datetime in log.
+^(2021/[0-9][0-9]/[0-9]{0,2} [0-9]{0,2} ?:[0-1]{0,1}[0-9]{1,2}:[0-5][0-9] ?:) 
 
 # update price and add related product, upsells, crosssell into metafields shopify
 def check_product_import(self, convert, product, products_ext):
@@ -1238,3 +1238,116 @@ def check_product_import(self, convert, product, products_ext):
 							for i in list_image_from_srcset:
 								if i not in links:
 									links.append(i)
+
+# update customer grop for customer bigcommerce
+customer_id = self.get_map_field_by_src(self.TYPE_CUSTOMER, convert['id'], convert['code'])
+    if customer_id and convert['group_id']:
+        update_customer_group_data = [{
+            'id': customer_id,
+            'customer_group_id': self.LIST_CUSTOMER_GROUP_MAP[to_int(convert['group_id'])] if self.LIST_CUSTOMER_GROUP_MAP.get(to_int(convert['group_id'])) else None
+        }]
+        self.api_v3('/customers', update_customer_group_data, 'PUT')
+        self.log(f"{convert['id']} | {customer_id} | {update_customer_group_data}", 'cus_update_cus_group')
+
+# update option type swatch for product in bigcommerce 
+product_id = self.get_map_field_by_src(self.TYPE_PRODUCT, convert['id'], convert['code'])
+		if product_id:
+		# self.log(convert, 'pro_convert')
+		# self.log(products_ext, 'pro_convert')
+			if convert['children'] and convert['options_src']:
+                # update option_type: option type != swatch
+                
+				# options = convert['children'][0].get('attributes')
+				# if options:
+				# 	option_map_dic = dict()
+				# 	check = None
+				# 	for op in options:
+				# 		option_map_dic[op.get('option_name')] = op.get('option_type')
+				# 		if op.get('option_type') == 'swatch':
+							# check = op.get('option_name')
+				# 	pro_option_tar_api = self.api_v3('/catalog/products/' + to_str(product_id) + '/options')
+				# 	# if pro_option_tar_api:
+				# 	# 	pro_option_tar_data = json_decode(pro_option_tar_api).get('data')
+				# 	# 	if pro_option_tar_data:
+				# 	# 		for pro_op in pro_option_tar_data:
+				# 	# 			if check and pro_op.get('display_name') in option_map_dic.keys():
+				# 	# 				update_option = {
+				# 	# 					"id": pro_op['id'],
+				# 	# 					"product_id": product_id,
+				# 	# 					"type": option_map_dic[pro_op['display_name']],
+				# 	# 				}
+				# 	# 				self.log(f"{convert['id']} | {update_option}", 'update_option')
+				# 	# 				self.api_v3('/catalog/products/' + to_str(product_id) + '/options/' + to_str(pro_op['id']), update_option, 'put')
+
+				options = convert['options_src']
+				if options:
+					option_map_dic = dict()
+					check = None
+					option_values_swatch = None
+					for op in options:
+						# option_map_dic[op.get('option_name')] = op.get('option_type')
+						if op.get('type') == 'swatch':
+							check = op.get('display_name')
+							option_values_swatch = op.get('option_values')
+					if not option_values_swatch:
+						return True
+					self.log(f"{convert['id']} | {product_id} | {option_values_swatch}", 'option_values_swatch')
+					pro_option_tar_api = self.api_v3('/catalog/products/' + to_str(product_id) + '/options')
+					if pro_option_tar_api:
+						pro_option_tar_data = json_decode(pro_option_tar_api).get('data')
+						if pro_option_tar_data:
+							for pro_op in pro_option_tar_data:
+								list_option_values = list()
+								if check and pro_op.get('display_name') == check:
+									option_id = pro_op.get('id')
+									if option_id:
+										pro_option_detail_tar_api = self.api_v3('/catalog/products/' + to_str(product_id) + '/options/' + to_str(option_id))
+										if pro_option_detail_tar_api:
+											pro_option_detail_tar_api_data = json_decode(pro_option_detail_tar_api).get('data')
+											option_values_data = pro_option_detail_tar_api_data.get('option_values')
+										pro_option_detail_tar_api_data['type'] = 'swatch'
+										if not option_values_data:
+											continue
+										
+										for index, op_val in enumerate(option_values_data):
+											option_value_data_src = list(filter(lambda x: x['label'] == op_val.get('label'), option_values_swatch))[0]
+											op_val_id = option_value_data_src.get('id')
+											update_option_value = {
+												"id": op_val['id'],
+												"sort_order": op_val.get('sort_order'),
+												"label": option_value_data_src.get('label'),
+												"is_default": option_value_data_src.get('is_default'),
+												"value_data": dict()
+											}
+
+											if option_value_data_src.get('value_data'):
+												image_url = option_value_data_src.get('value_data').get('image_url')
+												if not image_url:
+													continue
+												image_url_tar = self.insert_image_desc(image_url)
+												if not image_url_tar:
+													update_option_value['value_data'] = None
+												else:
+													update_option_value['value_data']['image_url'] = image_url_tar
+											list_option_values.append(update_option_value)
+										pro_option_detail_tar_api_data['option_values'] = list_option_values
+											
+										self.api_v3('/catalog/products/' + to_str(product_id) + '/options/' + to_str(pro_op['id']), pro_option_detail_tar_api_data, 'put')
+										self.log(f"{convert['id']} | {product_id} | {pro_option_detail_tar_api_data}", 'option_update_data')
+										self.log(f"{convert['id']} | {product_id}", 'option_update')
+
+        function create_api() {
+    document.getElementById('api_client_title').value = 'litextension';
+    document.getElementById('api_client_contact_email').value = 'contact@litextension.com';
+
+    const function_list = document.querySelectorAll("[name='api_client[access_scope][]']");
+    for (let index = 0; index < function_list.length; index++) {
+        let attr_id = function_list[index].getAttribute('id');
+        if (attr_id.indexOf('[') == -1) {
+            continue
+        }
+        options = function_list[index].getElementsByTagName('option');
+        options[options.length - 1].selected = 'selected';
+    }
+}
+create_api();
