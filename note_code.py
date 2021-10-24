@@ -1351,3 +1351,64 @@ product_id = self.get_map_field_by_src(self.TYPE_PRODUCT, convert['id'], convert
     }
 }
 create_api();
+
+
+# map cate and brand woocommerc3e 
+def check_product_import(self, convert, product, products_ext):
+		self.log(convert, 'pro_convert')
+		product_id = self.get_map_field_by_src(self.TYPE_PRODUCT, convert['id'], convert['code'], lang = self._notice['target']['language_default'])
+		if product_id:
+			# pass
+			all_categories = list()
+			if convert['categories']:
+				query = {
+					'type': 'select',
+					'query': "select tx.term_id, tx.term_taxonomy_id, t.name, t.slug from _DBPRF_term_taxonomy as tx join _DBPRF_terms as t on tx.term_id = t.term_id where tx.taxonomy = 'product_cat'"
+				}
+				# query = ""select tx.term_id, t.name, t.slug from _DBPRF_term_taxonomy as tx join _DBPRF_terms as t on tx.term_id = t.term_id where tx.taxonomy = 'pwb-brand'
+				category_data = self.import_data_connector(query)
+				# term_ids = list()
+				for category in convert['categories']:
+					# category_id = self.get_map_field_by_src(self.TYPE_CATEGORY, category['id'], category['code'], language_code)
+					if category.get('code'):
+						cate_slug = category.get('code')
+
+						cate_id = [to_int(x['term_taxonomy_id']) for x in category_data if x['slug'] == cate_slug]
+						if cate_id:
+							cate_id = cate_id[0]
+							all_categories.append(cate_id)
+
+				all_categories = list(set(all_categories))
+				self.log(f"{convert['id']} | {product_id} | {all_categories}", 'pro_cate')
+				for cate_id in all_categories:
+					category_data = {
+						'object_id': product_id,
+						'term_taxonomy_id': cate_id,
+						'term_order': 0
+					}
+					self.log(self.import_data_connector(self.create_insert_query_connector("term_relationships", category_data)), 'product', 'map_cate')
+					# all_queries.append(category_query)
+			if convert['manufacturer']['code'] or convert['manufacturer']['name']:
+				query = {
+					'type': 'select',
+					'query': "select tx.term_id, tx.term_taxonomy_id, t.name, t.slug from _DBPRF_term_taxonomy as tx join _DBPRF_terms as t on tx.term_id = t.term_id where tx.taxonomy = 'pwb-brand'"
+				}
+				# query = ""select tx.term_id, t.name, t.slug from _DBPRF_term_taxonomy as tx join _DBPRF_terms as t on tx.term_id = t.term_id where tx.taxonomy = 'pwb-brand'
+				manufacturer_data = self.import_data_connector(query)
+				self.log(manufacturer_data, 'manu_data_target')
+				if manufacturer_data:
+					# brand_id = self.get_row_value_from_list_by_field(manufacturer_data, 'slug', convert['manufacturer']['code'], 'term_id')
+					manufacturer_id = [x['term_taxonomy_id'] for x in manufacturer_data if x['slug'] == convert['manufacturer']['code']]
+					if manufacturer_id:
+						manufacturer_id = manufacturer_id[0]
+						self.log(f"{convert['id']} | {product_id} | {convert['manufacturer']['name']} | {manufacturer_id}", 'pro_manu')
+
+					if manufacturer_id:
+						relationship_data = {
+							'object_id': product_id,
+							'term_taxonomy_id': manufacturer_id,
+							'term_order': 0
+						}
+						relationship_query = self.import_data_connector(self.create_insert_query_connector("term_relationships", relationship_data), 'product')
+						self.log(relationship_query, 'map_manu')
+		return True #self.get_map_field_by_src(self.TYPE_PRODUCT, convert['id'], convert['code'], lang = self._notice['target']['language_default'])
